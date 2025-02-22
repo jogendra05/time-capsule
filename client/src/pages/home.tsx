@@ -15,9 +15,9 @@ export default function Home() {
     <div className="min-h-screen flex flex-col">
       {/* Hero Section */}
       <main className="flex-1">
-        <section className="container mx-auto px-4 py-16">
+        <section className="container mx-auto px-4 py-16 ">
           <GradientWrapper className="p-8 md:p-16">
-            <div className="max-w-3xl mx-auto text-center">
+            <div className="max-w-3xl mx-auto text-center ">
               <motion.div {...fadeInUp}>
                 <TimerIcon className="w-16 h-16 mx-auto mb-8 text-primary" />
                 <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
