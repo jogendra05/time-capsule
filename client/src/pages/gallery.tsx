@@ -1,53 +1,157 @@
-import { motion } from "framer-motion";
-import { GradientWrapper } from "@/components/gradient-wrapper";
-import { Camera } from "lucide-react";
-import { mockCapsules } from "@/lib/mock-data";
+// import React, { useState } from 'react';
+// import SearchBar from '../components/SearchBar';
+// import CapsuleCard from '../components/CapsuleCard';
+// import { Capsule } from '../lib/types';
+// import Sidebar from '@/components/Sidebar';
+// import { Menu } from "lucide-react";
 
-export default function Gallery() {
+// const MOCK_CAPSULES: Capsule[] = [
+//   {
+//     id: '1',
+//     title: 'Graduation Memories',
+//     description: 'A collection of our best moments from graduation day.',
+//     unlockDate: new Date('2024-12-25'),
+//     isLocked: true,
+//     mediaUrl: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80',
+//     isShared: false,
+//     createdAt: new Date('2024-03-01'),
+//     createdBy: 'user1'
+//   },
+//   {
+//     id: '2',
+//     title: 'Summer Vacation 2023',
+//     description: 'Beach memories and adventures from our amazing summer trip.',
+//     unlockDate: new Date('2024-06-01'),
+//     isLocked: true,
+//     mediaUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80',
+//     isShared: true,
+//     createdAt: new Date('2023-09-15'),
+//     createdBy: 'user1'
+//   }
+// ];
+
+
+
+// const Gallery = () => {
+//   const [searchQuery, setSearchQuery] = useState('');
+//   const [capsules] = useState<Capsule[]>(MOCK_CAPSULES);
+//   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // State to toggle sidebar
+
+//   const filteredCapsules = capsules.filter(capsule =>
+//     capsule.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+//     capsule.description.toLowerCase().includes(searchQuery.toLowerCase())
+//   );
+
+//   return (
+//     <div className="flex h-screen">
+//       {/* Sidebar - Hidden on small screens, toggled with a button */}
+//       <div className={`fixed left-0 top-0 h-full transition-all bg-white border-r border-gray-200 z-50 ${isSidebarOpen ? "w-64" : "w-0 overflow-hidden"} md:w-64`}>
+//         <Sidebar />
+//       </div>
+
+//       {/* Main Content */}
+//       <div className={`flex flex-col flex-1 transition-all p-6 overflow-auto ${isSidebarOpen ? "md:ml-64" : "ml-0"}`}>
+//         {/* Toggle Sidebar Button (Visible on Small Screens) */}
+//         <button 
+//           className="md:hidden mb-4 p-2 bg-indigo-600 text-white rounded-lg"
+//           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+//         >
+//           <Menu className="w-6 h-6" />
+//         </button>
+
+//         <div className="mb-8">
+//           <h1 className="text-2xl font-bold text-gray-900 mb-2">My Time Capsules</h1>
+//           <p className="text-gray-600">Manage and explore your digital memories.</p>
+//         </div>
+
+//         <SearchBar onSearch={setSearchQuery} />
+
+//         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+//           {filteredCapsules.map(capsule => (
+//             <CapsuleCard key={capsule.id} capsule={capsule} />
+//           ))}
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default Gallery;
+
+import React, { useState } from 'react';
+import SearchBar from '../components/SearchBar';
+import CapsuleCard from '../components/CapsuleCard';
+import { Capsule } from '../lib/types';
+import Sidebar from '@/components/Sidebar';
+import { Menu } from "lucide-react";
+
+const MOCK_CAPSULES: Capsule[] = [
+  {
+    id: '1',
+    title: 'Graduation Memories',
+    description: 'A collection of our best moments from graduation day.',
+    unlockDate: new Date('2024-12-25'),
+    isLocked: true,
+    mediaUrl: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80',
+    isShared: false,
+    createdAt: new Date('2024-03-01'),
+    createdBy: 'user1'
+  },
+  {
+    id: '2',
+    title: 'Summer Vacation 2023',
+    description: 'Beach memories and adventures from our amazing summer trip.',
+    unlockDate: new Date('2024-06-01'),
+    isLocked: true,
+    mediaUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80',
+    isShared: true,
+    createdAt: new Date('2023-09-15'),
+    createdBy: 'user1'
+  }
+];
+
+const Gallery = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [capsules] = useState<Capsule[]>(MOCK_CAPSULES);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // State to toggle sidebar
+
+  const filteredCapsules = capsules.filter(capsule =>
+    capsule.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    capsule.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-purple-50/50">
-      <main className="container mx-auto px-4 py-16">
-        <GradientWrapper className="p-8 mb-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center"
-          >
-            <Camera className="w-12 h-12 mx-auto mb-4 text-primary" />
-            <h1 className="text-3xl font-bold mb-4">Memory Gallery</h1>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Explore a collection of unlocked time capsules and shared memories from our
-              community.
-            </p>
-          </motion.div>
-        </GradientWrapper>
+    <div className="flex h-screen">
+      {/* Sidebar */}
+      <div className={`bg-white border-r border-gray-200 transition-all duration-300 ${isSidebarOpen ? "w-64" : "w-0 md:w-64"} overflow-hidden`}>
+        <Sidebar />
+      </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {mockCapsules.map((capsule, index) => (
-            <motion.div
-              key={capsule.id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.1 }}
-              className="relative aspect-square rounded-lg overflow-hidden group"
-            >
-              <img
-                src={capsule.imageUrl}
-                alt={capsule.title}
-                className="w-full h-full object-cover transition-transform group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="absolute bottom-4 left-4 right-4 text-white">
-                  <h3 className="font-semibold truncate">{capsule.title}</h3>
-                  <p className="text-sm text-white/80 truncate">
-                    {capsule.description}
-                  </p>
-                </div>
-              </div>
-            </motion.div>
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col p-6 overflow-auto">
+        {/* Toggle Sidebar Button (Visible on Small Screens) */}
+        <button 
+          className="md:hidden mb-4 p-2 bg-indigo-600 text-white rounded-lg"
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">My Time Capsules</h1>
+          <p className="text-gray-600">Manage and explore your digital memories.</p>
+        </div>
+
+        <SearchBar onSearch={setSearchQuery} />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCapsules.map(capsule => (
+            <CapsuleCard key={capsule.id} capsule={capsule} />
           ))}
         </div>
-      </main>
+      </div>
     </div>
   );
-}
+};
+
+export default Gallery;
