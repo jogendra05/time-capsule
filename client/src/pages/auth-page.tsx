@@ -1,6 +1,8 @@
+// CHANGE: Import axios for making HTTP requests to the backend
+import axios from "axios";
 import { useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
+// import { useAuth } from "@/hooks/use-auth"; // CHANGE: Removed auth hook login/register mutations
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,15 +16,56 @@ import { Eye, EyeOff, Lock, User } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 
 export default function AuthPage() {
-  const { user, loginMutation, registerMutation } = useAuth();
+  // CHANGE: Removed loginMutation and registerMutation from useAuth
+  // const { user, loginMutation, registerMutation } = useAuth();
+  const { user } = { user: null }; // Placeholder: adjust according to your auth logic
+
   const [, setLocation] = useLocation();
   const [showPassword, setShowPassword] = useState(false);
+
+  // CHANGE: Added state to store credentials (username and password)
+  const [credentials, setCredentials] = useState<{ username: string; password: string }>({
+    username: "",
+    password: "",
+  });
 
   // Redirect if already logged in
   if (user) {
     setLocation("/");
     return null;
   }
+
+  // CHANGE: Function to handle login using axios
+  const handleLogin = async (data: InsertUser) => {
+    // Store credentials in state
+    setCredentials({ username: data.username, password: data.password });
+    try {
+      // Send a POST request to Django login endpoint
+      const response = await axios.post("http://localhost:8000/api/login/", data);
+      console.log("Login successful:", response.data);
+      // Redirect or update UI on success
+      setLocation("/");
+    } catch (error) {
+      console.error("Login error:", error);
+      // Handle errors (show message to user, etc.)
+    }
+  };
+
+  // CHANGE: Function to handle registration using axios
+  const handleRegister = async (data: InsertUser) => {
+    // Store credentials in state
+    setCredentials({ username: data.username, password: data.password });
+    try {
+      // Send a POST request to Django register endpoint
+      const response = await axios.post("http://localhost:8000/api/register/", data);
+      console.log("Registration successful:", response.data);
+      // Redirect or update UI on success
+      setLocation("/");
+    } catch (error) {
+      console.error("Registration error:", error);
+      // Handle errors (show message to user, etc.)
+    }
+  };
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-background">
@@ -58,10 +101,11 @@ export default function AuthPage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                   >
+                    {/* CHANGE: Pass the handleLogin function to AuthForm for login */}
                     <AuthForm
                       mode="login"
-                      onSubmit={(data) => loginMutation.mutate(data)}
-                      isPending={loginMutation.isPending}
+                      onSubmit={handleLogin}
+                      isPending={false} // You can manage loading state as needed
                       showPassword={showPassword}
                       onTogglePassword={() => setShowPassword(!showPassword)}
                     />
@@ -74,10 +118,11 @@ export default function AuthPage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                   >
+                    {/* CHANGE: Pass the handleRegister function to AuthForm for registration */}
                     <AuthForm
                       mode="register"
-                      onSubmit={(data) => registerMutation.mutate(data)}
-                      isPending={registerMutation.isPending}
+                      onSubmit={handleRegister}
+                      isPending={false} // You can manage loading state as needed
                       showPassword={showPassword}
                       onTogglePassword={() => setShowPassword(!showPassword)}
                     />
