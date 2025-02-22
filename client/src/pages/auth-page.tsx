@@ -1,75 +1,93 @@
-// CHANGE: Import axios for making HTTP requests to the backend
 import axios from "axios";
 import { useState } from "react";
 import { useLocation } from "wouter";
-// import { useAuth } from "@/hooks/use-auth"; // CHANGE: Removed auth hook login/register mutations
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { insertUserSchema, type InsertUser } from "@shared/authSchema";
-import { Eye, EyeOff, Lock, User } from "lucide-react";
+import { z } from "zod";
+import { Eye, EyeOff, Lock, User, Mail } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 
-export default function AuthPage() {
-  // CHANGE: Removed loginMutation and registerMutation from useAuth
-  // const { user, loginMutation, registerMutation } = useAuth();
-  const { user } = { user: null }; // Placeholder: adjust according to your auth logic
+// Separate schemas for login and registration
+const registerSchema = z.object({
+  name: z.string().min(3, "Name must be at least 3 characters"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  password2: z.string(),
+}).refine(data => data.password === data.password2, {
+  message: "Passwords don't match",
+  path: ["password2"]
+});
 
+const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+type RegisterData = z.infer<typeof registerSchema>;
+type LoginData = z.infer<typeof loginSchema>;
+
+export default function AuthPage() {
   const [, setLocation] = useLocation();
   const [showPassword, setShowPassword] = useState(false);
+  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
 
-  // CHANGE: Added state to store credentials (username and password)
-  const [credentials, setCredentials] = useState<{ username: string; password: string }>({
-    username: "",
-    password: "",
-  });
-
-  // Redirect if already logged in
-  if (user) {
-    setLocation("/");
-    return null;
-  }
-
-  // CHANGE: Function to handle login using axios
-  const handleLogin = async (data: InsertUser) => {
-    // Store credentials in state
-    setCredentials({ username: data.username, password: data.password });
+  const handleLogin = async (data: LoginData) => {
     try {
-      // Send a POST request to Django login endpoint
-      const response = await axios.post("http://localhost:8000/api/login/", data);
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/user/login/",
+        {
+          email: data.email,
+          password: data.password
+        }
+      );
       console.log("Login successful:", response.data);
-      // Redirect or update UI on success
       setLocation("/");
-    } catch (error) {
-      console.error("Login error:", error);
-      // Handle errors (show message to user, etc.)
+    } catch (error: any) {
+      console.error("Login error:", error.response?.data);
+      alert(`Login failed: ${error.response?.data?.detail || "Check credentials"}`);
     }
   };
 
-  // CHANGE: Function to handle registration using axios
-  const handleRegister = async (data: InsertUser) => {
-    // Store credentials in state
-    setCredentials({ username: data.username, password: data.password });
+  const handleRegister = async (data: RegisterData) => {
     try {
-      // Send a POST request to Django register endpoint
-      const response = await axios.post("http://localhost:8000/api/register/", data);
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/user/register/",
+        {
+          ...data,
+          tc: true
+        }
+      );
       console.log("Registration successful:", response.data);
-      // Redirect or update UI on success
-      setLocation("/");
-    } catch (error) {
-      console.error("Registration error:", error);
-      // Handle errors (show message to user, etc.)
+      setLocation("/login");
+    } catch (error: any) {
+      console.error("Registration error:", error.response?.data);
+      const errors = Object.entries(error.response?.data || {})
+      alert(`Registration failed:\n${errors}`);
     }
   };
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-background">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         className="flex-1 flex items-center justify-center p-4 sm:p-8"
@@ -77,20 +95,30 @@ export default function AuthPage() {
         <Card className="w-full max-w-md mx-4">
           <CardHeader className="space-y-2">
             <CardTitle className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80">
-              Welcome Back
+              Time Capsule
             </CardTitle>
             <CardDescription className="text-base">
-              Store your memories, unlock them when the time is right
+              Preserve your memories for the future
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="login" className="space-y-6">
+            <Tabs 
+              value={activeTab} 
+              onValueChange={(value) => setActiveTab(value as "login" | "register")}
+              className="space-y-6"
+            >
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <TabsTrigger 
+                  value="login" 
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
                   Sign In
                 </TabsTrigger>
-                <TabsTrigger value="register" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  Create Account
+                <TabsTrigger 
+                  value="register" 
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  Register
                 </TabsTrigger>
               </TabsList>
 
@@ -101,11 +129,9 @@ export default function AuthPage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                   >
-                    {/* CHANGE: Pass the handleLogin function to AuthForm for login */}
                     <AuthForm
                       mode="login"
                       onSubmit={handleLogin}
-                      isPending={false} // You can manage loading state as needed
                       showPassword={showPassword}
                       onTogglePassword={() => setShowPassword(!showPassword)}
                     />
@@ -118,11 +144,9 @@ export default function AuthPage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                   >
-                    {/* CHANGE: Pass the handleRegister function to AuthForm for registration */}
                     <AuthForm
                       mode="register"
                       onSubmit={handleRegister}
-                      isPending={false} // You can manage loading state as needed
                       showPassword={showPassword}
                       onTogglePassword={() => setShowPassword(!showPassword)}
                     />
@@ -134,7 +158,7 @@ export default function AuthPage() {
         </Card>
       </motion.div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         className="flex-1 relative hidden lg:block"
@@ -179,55 +203,66 @@ function SocialButton({ children, ...props }: React.ButtonHTMLAttributes<HTMLBut
   );
 }
 
-function AuthForm({ 
+function AuthForm({
   mode,
   onSubmit,
-  isPending,
   showPassword,
-  onTogglePassword
-}: { 
-  mode: "login" | "register",
-  onSubmit: (data: InsertUser) => void,
-  isPending: boolean,
-  showPassword: boolean,
-  onTogglePassword: () => void
+  onTogglePassword,
+}: {
+  mode: "login" | "register";
+  onSubmit: (data: LoginData | RegisterData) => void;
+  showPassword: boolean;
+  onTogglePassword: () => void;
 }) {
-  const form = useForm<InsertUser>({
-    resolver: zodResolver(
-      insertUserSchema.extend({
-        username: insertUserSchema.shape.username
-          .min(3, "Username must be at least 3 characters")
-          .max(20, "Username must be less than 20 characters"),
-        password: insertUserSchema.shape.password
-          .min(8, "Password must be at least 8 characters")
-          .regex(
-            /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
-            "Password must contain at least one uppercase letter, one lowercase letter, and one number"
-          ),
-      })
-    ),
+  const form = useForm<LoginData | RegisterData>({
+    resolver: zodResolver(mode === "login" ? loginSchema : registerSchema),
     defaultValues: {
-      username: "",
+      ...(mode === "register" ? { name: "" } : {}),
+      email: "",
       password: "",
-    },
+      ...(mode === "register" ? { password2: "" } : {}),
+    }
   });
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {mode === "register" && (
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Full Name</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      className="pl-9 border-gray-200 focus:border-primary"
+                      placeholder="Enter your full name"
+                      {...field}
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
         <FormField
           control={form.control}
-          name="username"
+          name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Username</FormLabel>
+              <FormLabel>Email</FormLabel>
               <FormControl>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    className="pl-9 border-gray-200 focus:border-primary" 
-                    placeholder="Enter your username"
-                    {...field} 
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-9 border-gray-200 focus:border-primary"
+                    placeholder="Enter your email"
+                    {...field}
                   />
                 </div>
               </FormControl>
@@ -235,6 +270,7 @@ function AuthForm({
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="password"
@@ -244,11 +280,11 @@ function AuthForm({
               <FormControl>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    type={showPassword ? "text" : "password"} 
-                    className="pl-9 pr-9 border-gray-200 focus:border-primary" 
-                    placeholder={mode === "login" ? "Enter your password" : "Create a strong password"}
-                    {...field} 
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    className="pl-9 pr-9 border-gray-200 focus:border-primary"
+                    placeholder="Enter your password"
+                    {...field}
                   />
                   <Button
                     type="button"
@@ -257,11 +293,7 @@ function AuthForm({
                     className="absolute right-1 top-1 h-8 w-8 p-0 hover:bg-transparent"
                     onClick={onTogglePassword}
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
               </FormControl>
@@ -269,6 +301,30 @@ function AuthForm({
             </FormItem>
           )}
         />
+
+        {mode === "register" && (
+          <FormField
+            control={form.control}
+            name="password2"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Confirm Password</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="password"
+                      className="pl-9 border-gray-200 focus:border-primary"
+                      placeholder="Confirm your password"
+                      {...field}
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         {mode === "login" && (
           <div className="flex justify-end">
@@ -278,23 +334,8 @@ function AuthForm({
           </div>
         )}
 
-        <Button 
-          type="submit" 
-          className="w-full bg-primary hover:bg-primary/90" 
-          disabled={isPending}
-        >
-          {isPending ? (
-            <>
-              <motion.div
-                className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              />
-              Loading...
-            </>
-          ) : (
-            mode === "login" ? "Sign In" : "Create Account"
-          )}
+        <Button type="submit" className="w-full bg-primary hover:bg-primary/90">
+          {mode === "login" ? "Sign In" : "Create Account"}
         </Button>
 
         <div className="relative my-6">
