@@ -1,288 +1,359 @@
-import { motion } from "framer-motion";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-import { CalendarIcon, HelpCircle, ImageIcon, Lock } from "lucide-react";
-import { format } from "date-fns";
-import { insertCapsuleSchema } from "@shared/schema";
-import { GradientWrapper } from "@/components/gradient-wrapper";
+import React, { useState, useCallback } from 'react';
+import { useLocation } from 'wouter'; // Import useLocation
+import { motion, AnimatePresence } from 'framer-motion';
+import DatePicker from 'react-datepicker';
+import { useDropzone } from 'react-dropzone';
+import { Lock, Calendar, Upload, Link as LinkIcon, Globe, UserPlus, X } from 'lucide-react';
+import "react-datepicker/dist/react-datepicker.css";
 
-const previewImages = [
-  "https://images.unsplash.com/photo-1447069387593-a5de0862481e",
-  "https://images.unsplash.com/photo-1528109901743-12b16e05eedf",
-  "https://images.unsplash.com/photo-1527422419387-c3822ad4b198",
-];
+interface MediaFile {
+  file: File;
+  preview: string;
+  type: string;
+}
 
-export default function Create() {
-  const [selectedImage, setSelectedImage] = useState(previewImages[0]);
+const CreateCapsule = () => {
+  const [, setLocation] = useLocation();  // useLocation returns 2 arguments the first one we don't care and the second one is for changing routes
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [unlockDate, setUnlockDate] = useState<Date | null>(null);
+  const [isPublic, setIsPublic] = useState(false);
 
-  const form = useForm({
-    resolver: zodResolver(insertCapsuleSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      content: { text: "" },
-      openDate: undefined,
-      imageUrl: previewImages[0],
-    },
+  const [imageFiles, setImageFiles] = useState<MediaFile[]>([]);
+  const [videoFiles, setVideoFiles] = useState<MediaFile[]>([]);
+  const [audioFiles, setAudioFiles] = useState<MediaFile[]>([]);
+
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    acceptedFiles.forEach(file => {
+      const fileType = file.type.split('/')[0];
+      const newFile = {
+        file,
+        preview: URL.createObjectURL(file),
+        type: fileType,
+      };
+
+      if (fileType === 'image') {
+        setImageFiles(prev => [...prev, newFile]);
+      } else if (fileType === 'video') {
+        setVideoFiles(prev => [...prev, newFile]);
+      } else if (fileType === 'audio') {
+        setAudioFiles(prev => [...prev, newFile]);
+      }
+    });
+    
+    // Simulate upload progress
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 10;
+      setUploadProgress(progress);
+      if (progress >= 100) {
+        clearInterval(interval);
+        setTimeout(() => setUploadProgress(0), 1000);
+      }
+    }, 200);
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': [],
+      'video/*': [],
+      'audio/*': [],
+    }
   });
 
-  const onSubmit = (data: any) => {
-    console.log(data);
+  const removeFile = (index: number, fileType: string) => {
+    if (fileType === 'image') {
+      setImageFiles(prev => {
+        const newFiles = [...prev];
+        URL.revokeObjectURL(newFiles[index].preview);
+        newFiles.splice(index, 1);
+        return newFiles;
+      });
+    } else if (fileType === 'video') {
+      setVideoFiles(prev => {
+        const newFiles = [...prev];
+        URL.revokeObjectURL(newFiles[index].preview);
+        newFiles.splice(index, 1);
+        return newFiles;
+      });
+    } else if (fileType === 'audio') {
+      setAudioFiles(prev => {
+        const newFiles = [...prev];
+        URL.revokeObjectURL(newFiles[index].preview);
+        newFiles.splice(index, 1);
+        return newFiles;
+      });
+    }
+  };
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log({
+      title,
+      description,
+      unlockDate,
+      isPublic,
+      imageFiles,
+      videoFiles,
+      audioFiles,
+    });
+    setLocation('/'); // Simple alternative since wouter does not provide navigate function
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-purple-50/50">
-      <main className="container mx-auto px-4 py-16">
-        <GradientWrapper className="max-w-4xl mx-auto p-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="text-center mb-12">
-              <Lock className="w-12 h-12 mx-auto mb-4 text-primary" />
-              <h1 className="text-3xl font-bold mb-4">Create a New Time Capsule</h1>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Fill in the details below to create your digital time capsule. Choose when it
-                can be opened and customize its appearance.
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-4xl mx-auto py-8 px-4"
+    >
+      <div className="bg-white rounded-xl shadow-sm p-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Create New Time Capsule</h1>
+        <p className="text-gray-600 mb-8">Preserve your memories and unlock them in the future.</p>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Title Input */}
+          <div>
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+              Title
+            </label>
+            <input
+              type="text"
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              placeholder="Name your time capsule"
+              required
+            />
+          </div>
+
+          {/* Description Input */}
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
+            <textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              placeholder="What's inside this capsule?"
+              required
+            />
+          </div>
+
+          {/* Unlock Date Picker */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Unlock Date
+            </label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <DatePicker
+                selected={unlockDate}
+                onChange={(date) => setUnlockDate(date)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                placeholderText="When should this capsule unlock?"
+                minDate={new Date()}
+                required
+              />
+            </div>
+          </div>
+
+          {/* Media Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Add Media
+            </label>
+            <div
+              {...getRootProps()}
+              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                isDragActive ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 hover:border-indigo-500'
+              }`}
+            >
+              <input {...getInputProps()} />
+              <Upload className="mx-auto h-12 w-12 text-gray-400" />
+              <p className="mt-2 text-sm text-gray-600">
+                Drag & drop images, videos, or audio files here, or click to select files
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8">
-              {/* Form Section */}
-              <div>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    <FormField
-                      control={form.control}
-                      name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Title</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Name your time capsule" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            Give your capsule a meaningful name that captures its essence
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="What's this time capsule about?"
-                              className="min-h-[100px]"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Describe the memories or moments you're preserving
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="content.text"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Message</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Write your message for the future..."
-                              className="min-h-[150px]"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            This is the main content that will be revealed when the capsule is opened
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="openDate"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Open Date</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                    "w-full pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                >
-                                  {field.value ? (
-                                    format(field.value, "PPP")
-                                  ) : (
-                                    <span>Pick a date</span>
-                                  )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                initialFocus
-                                disabled={(date) => date < new Date()}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <FormDescription>
-                            Choose when your capsule can be opened
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <Button type="submit" className="w-full">
-                      Create Time Capsule
-                    </Button>
-                  </form>
-                </Form>
+            {/* Upload Progress */}
+            {uploadProgress > 0 && (
+              <div className="mt-4">
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-indigo-600"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
               </div>
+            )}
 
-              {/* Preview Section */}
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      Preview
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>See how your capsule will appear in the timeline</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </CardTitle>
-                    <CardDescription>
-                      This is how others will see your capsule until it's opened
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="relative h-48 mb-4 rounded-lg overflow-hidden">
+            {/* Media Preview */}
+            <AnimatePresence>
+              {imageFiles.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4"
+                >
+                  {imageFiles.map((file, index) => (
+                    <motion.div
+                      key={file.preview}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      className="relative aspect-square rounded-lg overflow-hidden bg-gray-100"
+                    >
                       <img
-                        src={selectedImage}
+                        src={file.preview}
                         alt="Preview"
                         className="w-full h-full object-cover"
                       />
-                      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" />
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {previewImages.map((image) => (
-                        <button
-                          key={image}
-                          onClick={() => setSelectedImage(image)}
-                          className={cn(
-                            "relative h-20 rounded-md overflow-hidden",
-                            "ring-2 ring-offset-2",
-                            selectedImage === image
-                              ? "ring-primary"
-                              : "ring-transparent"
-                          )}
-                        >
-                          <img
-                            src={image}
-                            alt="Thumbnail"
-                            className="w-full h-full object-cover"
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <p className="text-sm text-muted-foreground">
-                      Select a cover image for your time capsule
-                    </p>
-                  </CardFooter>
-                </Card>
+                      <button
+                        onClick={() => removeFile(index, 'image')}
+                        className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-md hover:bg-gray-100"
+                      >
+                        <X className="w-4 h-4 text-gray-600" />
+                      </button>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-                {/* Tips Card */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <ImageIcon className="h-5 w-5" />
-                      Tips for a Great Capsule
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {[
-                        "Choose a meaningful date for opening",
-                        "Add detailed descriptions",
-                        "Include personal touches in your message",
-                        "Select an image that represents your memories",
-                      ].map((tip) => (
-                        <li key={tip} className="flex items-start gap-2 text-sm">
-                          <span className="text-primary">•</span>
-                          {tip}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              </div>
+            <AnimatePresence>
+              {videoFiles.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4"
+                >
+                  {videoFiles.map((file, index) => (
+                    <motion.div
+                      key={file.preview}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      className="relative aspect-square rounded-lg overflow-hidden bg-gray-100"
+                    >
+                      <video
+                        src={file.preview}
+                        className="w-full h-full object-cover"
+                        controls
+                      />
+                      <button
+                        onClick={() => removeFile(index, 'video')}
+                        className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-md hover:bg-gray-100"
+                      >
+                        <X className="w-4 h-4 text-gray-600" />
+                      </button>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {audioFiles.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4"
+                >
+                  {audioFiles.map((file, index) => (
+                    <motion.div
+                      key={file.preview}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center"
+                    >
+                       <p>Audio File</p>
+                      <audio
+                        src={file.preview}
+                        className="w-full h-full"
+                        controls
+                      />
+                      <button
+                        onClick={() => removeFile(index, 'audio')}
+                        className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-md hover:bg-gray-100"
+                      >
+                        <X className="w-4 h-4 text-gray-600" />
+                      </button>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Privacy Settings */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Privacy Settings
+            </label>
+            <div className="space-y-3">
+              <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="radio"
+                  name="privacy"
+                  checked={!isPublic}
+                  onChange={() => setIsPublic(false)}
+                  className="h-4 w-4 text-indigo-600"
+                />
+                <Lock className="w-5 h-5 text-gray-400" />
+                <div>
+                  <p className="font-medium text-gray-900">Private</p>
+                  <p className="text-sm text-gray-500">Only you can access this capsule</p>
+                </div>
+              </label>
+              <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="radio"
+                  name="privacy"
+                  checked={isPublic}
+                  onChange={() => setIsPublic(true)}
+                  className="h-4 w-4 text-indigo-600"
+                />
+                <Globe className="w-5 h-5 text-gray-400" />
+                <div>
+                  <p className="font-medium text-gray-900">Shareable</p>
+                  <p className="text-sm text-gray-500">Share via link or invite specific people</p>
+                </div>
+              </label>
             </div>
-          </motion.div>
-        </GradientWrapper>
-      </main>
-    </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex justify-end space-x-4">
+            <button
+              type="button"
+              onClick={() => setLocation('/')} // Use setLocation here
+              className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Create Capsule
+            </button>
+          </div>
+        </form>
+      </div>
+    </motion.div>
   );
-}
+};
+
+export default CreateCapsule;
