@@ -33,7 +33,7 @@ python manage.py createsuperuser
 ## Create .env file :-
 Save this in it :
 ```bash
-EMAIL_USER = 'contact@geekyshows.com'
-EMAIL_PASS = '123456'
-EMAIL_FROM = 'contact@geekyshows.com'
+EMAIL_USER = 'your email'
+EMAIL_PASS = 'your password'
+EMAIL_FROM = 'your email'
 ```
