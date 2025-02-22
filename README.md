@@ -28,3 +28,9 @@ python manage.py runserver
 ```bash
 python manage.py createsuperuser
 ```
+
+
+## Create .env file :-
+EMAIL_USER = 'contact@geekyshows.com'
+EMAIL_PASS = '123456'
+EMAIL_FROM = 'contact@geekyshows.com'
