@@ -24,6 +24,32 @@ import type { Capsule } from "@shared/schema";
 type FilterType = "all" | "locked" | "unlocked";
 type SortType = "newest" | "oldest" | "opening-soon";
 
+const getPosition = (index: number) => {
+  return index % 2 === 0 ? "left" : "right";
+};
+
+const ConnectorLine = ({ from }: { from: "left" | "right" }) => {
+  const isLeft = from === "left";
+  const pathD = isLeft 
+    ? "M50 0 Q 75 50 100 100"
+    : "M50 0 Q 25 50 0 100";
+
+  return (
+    <svg
+      className="absolute left-1/2 -bottom-[40px] z-0 h-[40px] w-full -translate-x-1/2 transform"
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+    >
+      <path
+        d={pathD}
+        className="stroke-muted-foreground/40"
+        strokeWidth="4"
+        fill="none"
+      />
+    </svg>
+  );
+};
+
 export default function Timeline() {
   const [filter, setFilter] = useState<FilterType>("all");
   const [sort, setSort] = useState<SortType>("newest");
@@ -32,7 +58,6 @@ export default function Timeline() {
   const filterCapsules = (capsules: Capsule[]) => {
     let filtered = capsules;
 
-    // Apply search filter
     if (search) {
       filtered = filtered.filter(
         (capsule) =>
@@ -41,7 +66,6 @@ export default function Timeline() {
       );
     }
 
-    // Apply status filter
     if (filter === "locked") {
       filtered = filtered.filter(
         (capsule) => new Date(capsule.openDate) > new Date()
@@ -52,14 +76,12 @@ export default function Timeline() {
       );
     }
 
-    // Apply sorting
     return filtered.sort((a, b) => {
       if (sort === "newest") {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       } else if (sort === "oldest") {
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       } else {
-        // opening-soon
         return (
           new Date(a.openDate).getTime() - new Date(b.openDate).getTime()
         );
@@ -181,17 +203,34 @@ export default function Timeline() {
           </div>
         </div>
 
-        {/* Capsules Grid */}
+        {/* Alternating Timeline Layout */}
         {filteredCapsules.length > 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
+            className="relative"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredCapsules.map((capsule, index) => (
-                <CapsuleCard key={capsule.id} capsule={capsule} index={index} />
-              ))}
+            <div className="relative flex flex-col items-center space-y-8">
+              {filteredCapsules.map((capsule, index) => {
+                const position = getPosition(index);
+                const alignment = position === "left" 
+                  ? "self-start mr-auto" 
+                  : "self-end ml-auto";
+
+                return (
+                  <div key={capsule.id} className={`relative z-10 w-full md:w-1/2 ${alignment}`}>
+                    <CapsuleCard
+                      capsule={capsule}
+                      index={index}
+                      className="relative bg-background hover:z-20 w-full max-w-[500px]"
+                    />
+                    {index !== filteredCapsules.length - 1 && (
+                      <ConnectorLine from={position} />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </motion.div>
         ) : (
