@@ -25,6 +25,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { z } from "zod";
 import { Eye, EyeOff, Lock, User, Mail } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
+import {useAuth} from "../context/AuthContext"
+import apiClient from '../api/client';
 
 // Separate schemas for login and registration
 const registerSchema = z.object({
@@ -49,6 +51,7 @@ export default function AuthPage() {
   const [, setLocation] = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  const { login, token } = useAuth();
 
   const handleLogin = async (data: LoginData) => {
     try {
@@ -60,12 +63,27 @@ export default function AuthPage() {
         }
       );
       console.log("Login successful:", response.data);
+      if(response?.data?.token){
+        login(response.data.token.access);
+      }
       setLocation("/");
     } catch (error: any) {
       console.error("Login error:", error.response?.data);
       alert(`Login failed: ${error.response?.data?.detail || "Check credentials"}`);
     }
   };
+
+  // const handleLogin = async (data: LoginData) => {
+  //   try {
+  //     const response = await apiClient.post('login/', {
+  //               email: data.email,
+  //               password: data.password
+  //             });
+  //     login(response.data.token);
+  //   } catch (error) {
+  //     console.error('Login failed:', error);
+  //   }
+  // };
 
   const handleRegister = async (data: RegisterData) => {
     try {
@@ -77,7 +95,8 @@ export default function AuthPage() {
         }
       );
       console.log("Registration successful:", response.data);
-      setLocation("/login");
+      login(response.data.token.access)
+      setLocation("/");
     } catch (error: any) {
       console.error("Registration error:", error.response?.data);
       const errors = Object.entries(error.response?.data || {})
