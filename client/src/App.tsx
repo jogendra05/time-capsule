@@ -9,10 +9,11 @@ import { AuthProvider } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Timeline from "@/pages/timeline";
-import Create from "@/pages/create";
+import Create from "@/pages/createCapsule";
 import About from "@/pages/about";
 import Gallery from "@/pages/gallery";
 import AuthPage from "@/pages/auth-page";
+import { CapsuleProvider } from './hooks/CapsuleContext';
 
 
 function Router() {
@@ -33,6 +34,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+      <CapsuleProvider>
         <div className="min-h-screen flex flex-col">
           <div className='pb-10'>
 
@@ -40,6 +42,7 @@ function App() {
           </div>
           <Router />
         </div>
+        </CapsuleProvider>
       </AuthProvider>
       <Toaster />
     </QueryClientProvider>
