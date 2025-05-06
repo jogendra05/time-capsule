@@ -30,3 +30,36 @@ export async function createCapsule(
     next(err);
   }
 }
+
+export async function listCapsules(
+  req: AuthRequest, res: Response, next: NextFunction
+) {
+  try {
+    const snap = await db.collection(COLL)
+      .where('ownerUid', '==', req.uid)
+      .orderBy('createdAt', 'desc')
+      .get();
+    const items = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json(items);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getCapsule(
+  req: AuthRequest, res: Response, next: NextFunction
+) {
+  try {
+    const docRef = db.collection(COLL).doc(req.params.id);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) throw new ApiError(404, 'Capsule not found');
+    const data = docSnap.data()!;
+    // Only owner or participant can view
+    if (data.ownerUid !== req.uid && !data.participants.includes(req.uid)) {
+      throw new ApiError(403, 'Forbidden');
+    }
+    res.json({ id: docSnap.id, ...data });
+  } catch (err) {
+    next(err);
+  }
+}
