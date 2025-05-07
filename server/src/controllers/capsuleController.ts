@@ -63,3 +63,44 @@ export async function getCapsule(
     next(err);
   }
 }
+
+export async function updateCapsule(
+  req: AuthRequest, res: Response, next: NextFunction
+) {
+  try {
+    const { title, description, openAt, imageUrls, participants } = req.body;
+    const ref = db.collection(COLL).doc(req.params.id);
+    const snap = await ref.get();
+    if (!snap.exists) throw new ApiError(404, 'Not found');
+    const data = snap.data()!;
+    if (data.ownerUid !== req.uid) throw new ApiError(403, 'Only owner can update');
+
+    const updates: any = { updatedAt: FieldValue.serverTimestamp() };
+    if (title !== undefined)       updates.title = title;
+    if (description !== undefined) updates.description = description;
+    if (openAt !== undefined)      updates.openAt = Timestamp.fromDate(new Date(openAt));
+    if (imageUrls !== undefined)   updates.imageUrls = imageUrls;
+    if (participants !== undefined)updates.participants = participants;
+
+    await ref.update(updates);
+    const updated = await ref.get();
+    res.json({ id: updated.id, ...updated.data() });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteCapsule(
+  req: AuthRequest, res: Response, next: NextFunction
+) {
+  try {
+    const ref = db.collection(COLL).doc(req.params.id);
+    const snap = await ref.get();
+    if (!snap.exists) throw new ApiError(404, 'Not found');
+    if (snap.data()!.ownerUid !== req.uid) throw new ApiError(403, 'Only owner can delete');
+    await ref.delete();
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
