@@ -1,11 +1,11 @@
 import * as admin from 'firebase-admin';
-// import * as serviceAccount from '../firebase-service-account.json';
+import dotenv from 'dotenv';
+dotenv.config();
 
 admin.initializeApp({
-//   credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
-  storageBucket: '<YOUR_FIREBASE_PROJECT>.appspot.com',
+  credential: admin.credential.cert(process.env.FIREBASE_SERVICE_ACCOUNT),
+  databaseURL: process.env.FIREBASE_DATABASE_URL,
 });
 
-export const db = admin.firestore();
-export const bucket = admin.storage().bucket();
 export const auth = admin.auth();
+export const db = admin.firestore();
