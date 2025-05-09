@@ -1,28 +1,53 @@
 import { Response, NextFunction } from 'express';
+import fs from 'fs';
 import { db } from '../firebase';
 import ApiError from '../utils/ApiError';
 import { AuthRequest } from '../middleware/auth';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
+import { uploadImage } from '../config/cloudinary';
 
 const COLL = 'capsules';
 
+// helper to upload & cleanup
+async function uploadAndCleanup(files: Express.Multer.File[]): Promise<string[]> {
+  const urls: string[] = [];
+  for (const file of files) {
+    const result = await uploadImage(file.path);
+    urls.push(result.secure_url);
+    fs.unlink(file.path, err => { if (err) console.warn('Cleanup failed:', err); });
+  }
+  return urls;
+}
+
 export async function createCapsule(
-  req: AuthRequest, res: Response, next: NextFunction
+  req: AuthRequest & { files?: Express.Multer.File[] },
+  res: Response,
+  next: NextFunction
 ) {
   try {
-    const { title, description, openAt, imageUrls = [], participants = [] } = req.body;
+    const { title, description = '', openAt, participants = [] } = req.body;
     if (!title || !openAt) {
       throw new ApiError(400, '`title` and `openAt` are required');
     }
+
+    // 1. Upload images
+    const files = req.files ?? [];
+    const imageUrls = await uploadAndCleanup(files);
+
+    // 2. Build and save
     const data = {
-      ownerUid: req.uid,
+      ownerUid:   req.uid,
       title,
-      description: description || '',
-      openAt: Timestamp.fromDate(new Date(openAt)),
+      description,
+      openAt:     Timestamp.fromDate(new Date(openAt)),
       imageUrls,
-      participants,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
+      participants: Array.isArray(participants)
+                     ? participants
+                     : JSON.parse(participants),
+      createdAt:  FieldValue.serverTimestamp(),
+      updatedAt:  FieldValue.serverTimestamp(),
+      isOpened:   false,
+      notifySent: false,
     };
     const ref = await db.collection(COLL).add(data);
     res.status(201).json({ id: ref.id, ...data });
@@ -54,7 +79,6 @@ export async function getCapsule(
     const docSnap = await docRef.get();
     if (!docSnap.exists) throw new ApiError(404, 'Capsule not found');
     const data = docSnap.data()!;
-    // Only owner or participant can view
     if (data.ownerUid !== req.uid && !data.participants.includes(req.uid)) {
       throw new ApiError(403, 'Forbidden');
     }
@@ -65,10 +89,12 @@ export async function getCapsule(
 }
 
 export async function updateCapsule(
-  req: AuthRequest, res: Response, next: NextFunction
+  req: AuthRequest & { files?: Express.Multer.File[] },
+  res: Response,
+  next: NextFunction
 ) {
   try {
-    const { title, description, openAt, imageUrls, participants } = req.body;
+    const { title, description, openAt, participants } = req.body;
     const ref = db.collection(COLL).doc(req.params.id);
     const snap = await ref.get();
     if (!snap.exists) throw new ApiError(404, 'Not found');
@@ -76,11 +102,25 @@ export async function updateCapsule(
     if (data.ownerUid !== req.uid) throw new ApiError(403, 'Only owner can update');
 
     const updates: any = { updatedAt: FieldValue.serverTimestamp() };
+
+    // 1. Handle new image uploads
+    const files = req.files ?? [];
+    if (files.length) {
+      const newUrls = await uploadAndCleanup(files);
+      updates.imageUrls = Array.isArray(data.imageUrls)
+        ? [...data.imageUrls, ...newUrls]
+        : newUrls;
+    }
+
+    // 2. Other fields
     if (title !== undefined)       updates.title = title;
     if (description !== undefined) updates.description = description;
     if (openAt !== undefined)      updates.openAt = Timestamp.fromDate(new Date(openAt));
-    if (imageUrls !== undefined)   updates.imageUrls = imageUrls;
-    if (participants !== undefined)updates.participants = participants;
+    if (participants !== undefined) {
+      updates.participants = Array.isArray(participants)
+        ? participants
+        : JSON.parse(participants);
+    }
 
     await ref.update(updates);
     const updated = await ref.get();
