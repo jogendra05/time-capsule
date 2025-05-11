@@ -1,22 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
-import { auth } from '../firebase';
-import ApiError from '../utils/ApiError';
+import admin from 'firebase-admin';
 
-export interface AuthRequest extends Request {
-  uid: string;
-}
-
-export async function authenticate(
-  req: Request, res: Response, next: NextFunction
+export default function authenticate(
+  req: Request,
+  res: Response,
+  next: NextFunction
 ) {
-  try {
-    const header = req.headers.authorization;
-    if (!header?.startsWith('Bearer ')) throw new ApiError(401, 'Missing token');
-    const idToken = header.split('Bearer ')[1];
-    const decoded = await auth.verifyIdToken(idToken);
-    (req as AuthRequest).uid = decoded.uid;
-    next();
-  } catch (err) {
-    next(new ApiError(401, 'Unauthorized'));
-  }
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+  admin.auth().verifyIdToken(token)
+    .then(decodedToken => {
+      req.uid = decodedToken.uid;  // Set uid directly on Request
+      next();
+    })
+    .catch(() => res.status(403).json({ error: 'Invalid token' }));
 }

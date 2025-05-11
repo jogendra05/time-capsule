@@ -1,10 +1,10 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
-import { db } from '../firebase';
-import ApiError from '../utils/ApiError';
-import { AuthRequest } from '../middleware/auth';
+import { db } from '../firebase.js';
+import ApiError from '../utils/ApiError.js';
+import  AuthRequest  from '../middleware/auth.js';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
-import { uploadImage } from '../config/cloudinary';
+import { uploadImage } from '../config/cloudinary.js';
 
 const COLL = 'capsules';
 
@@ -20,7 +20,7 @@ async function uploadAndCleanup(files: Express.Multer.File[]): Promise<string[]>
 }
 
 export async function createCapsule(
-  req: AuthRequest & { files?: Express.Multer.File[] },
+  req: Request, //& { files?: Express.Multer.File[] },
   res: Response,
   next: NextFunction
 ) {
@@ -57,7 +57,7 @@ export async function createCapsule(
 }
 
 export async function listCapsules(
-  req: AuthRequest, res: Response, next: NextFunction
+  req: Request, res: Response, next: NextFunction
 ) {
   try {
     const snap = await db.collection(COLL)
@@ -72,7 +72,7 @@ export async function listCapsules(
 }
 
 export async function getCapsule(
-  req: AuthRequest, res: Response, next: NextFunction
+  req: Request, res: Response, next: NextFunction
 ) {
   try {
     const docRef = db.collection(COLL).doc(req.params.id);
@@ -89,7 +89,7 @@ export async function getCapsule(
 }
 
 export async function updateCapsule(
-  req: AuthRequest & { files?: Express.Multer.File[] },
+  req: Request & { files?: Express.Multer.File[] },
   res: Response,
   next: NextFunction
 ) {
@@ -131,7 +131,7 @@ export async function updateCapsule(
 }
 
 export async function deleteCapsule(
-  req: AuthRequest, res: Response, next: NextFunction
+  req: Request, res: Response, next: NextFunction
 ) {
   try {
     const ref = db.collection(COLL).doc(req.params.id);

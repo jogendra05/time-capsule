@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth';
-import { createCapsule, deleteCapsule, getCapsule, listCapsules, updateCapsule } from '../controllers/capsuleController';
+import authenticate from '../middleware/auth.js';
+import { createCapsule, deleteCapsule, getCapsule, listCapsules, updateCapsule } from '../controllers/capsuleController.js';
 
 const router = Router();
 

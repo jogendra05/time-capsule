@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import capsulesRouter from './routes/capsules';
+import capsulesRouter from './routes/capsules.js';
 
 const app = express();
 app.use(cors());
